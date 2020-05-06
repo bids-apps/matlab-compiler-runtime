@@ -1,0 +1,74 @@
+tag_filter: &tag_filter
+  filters:
+    tags:
+      only: /.*/
+    branches:
+      ignore: /.*/
+
+version: 2
+jobs:
+  build:
+    machine:
+      image: circleci/classic:latest
+    steps:
+      - checkout
+      - run:
+          name: Build Docker image
+          command: |
+            git describe --tags --always > version
+            docker build -t octomike/${CIRCLE_PROJECT_REPONAME,,} .
+            mkdir -p ${HOME}/docker
+            docker save "octomike/${CIRCLE_PROJECT_REPONAME,,}" > ~/docker/image.tar
+          no_output_timeout: 30m # MCR is a large download
+      - persist_to_workspace:
+          root: /home/circleci
+          paths:
+            - docker/image.tar
+  test:
+    machine:
+      image: circleci/classic:latest
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Test Docker image
+          command: |
+            docker load -i /tmp/workspace/docker/image.tar
+            # figure out a better test
+            docker run -ti --rm --read-only --entrypoint /bin/sh octomike/${CIRCLE_PROJECT_REPONAME,,} -c 'test -d $MCRPath/runtime/glnxa64'
+  deploy:
+    docker:
+      - image: circleci/buildpack-deps:stretch
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - setup_remote_docker
+      - run: docker load -i /tmp/workspace/docker/image.tar
+      - run:
+          name: Publish Docker image
+          command: |
+            if [[ -n "${CIRCLE_TAG}" ]]; then
+              echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
+              docker tag octomike/${CIRCLE_PROJECT_REPONAME,,} octomike/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_TAG}
+              docker push octomike/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_TAG}
+              # for tags like 9.7.5-core, share a major tag 9.7-core as well
+              MAJOR_TAG=$(echo "${CIRCLE_TAG}" | sed -rn 's#([[:digit:]]+).([[:digit:]]+).([[:digit:]]+)(.*)#\1.\2\4#p')
+              if [[ -n "${MAJOR_TAG}" ]] ; then
+                docker tag octomike/${CIRCLE_PROJECT_REPONAME,,} octomike/${CIRCLE_PROJECT_REPONAME,,}:${MAJOR_TAG}
+                docker push octomike/${CIRCLE_PROJECT_REPONAME,,}:${MAJOR_TAG}
+              fi
+            fi
+workflows:
+  version: 2
+  build-test-deploy:
+    jobs:
+      - build:
+          <<: *tag_filter
+      - test:
+          requires:
+            - build
+          <<: *tag_filter
+      - deploy:
+          requires:
+            - test
+          <<: *tag_filter
