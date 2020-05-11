@@ -19,6 +19,9 @@ jobs:
             docker build -t octomike/${CIRCLE_PROJECT_REPONAME,,} .
             mkdir -p ${HOME}/docker
             docker save "octomike/${CIRCLE_PROJECT_REPONAME,,}" > ~/docker/image.tar
+            # persist guessed branch so we can use it in deploy/tag
+            BRANCH=$(git branch --contains tags/${CIRCLE_TAG})
+            echo -n ${BRANCH} > ~/docker/branch
           no_output_timeout: 30m # MCR is a large download
       - persist_to_workspace:
           root: /home/circleci
@@ -53,9 +56,9 @@ jobs:
               docker tag octomike/${CIRCLE_PROJECT_REPONAME,,} octomike/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_TAG}
               docker push octomike/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_TAG}
               # also publish tag for the corresponding matlab release version, which is the name of the current branch
-              BRANCH=$(git branch --contains tags/${CIRCLE_TAG})
               docker tag octomike/${CIRCLE_PROJECT_REPONAME,,} octomike/${CIRCLE_PROJECT_REPONAME,,}:${BRANCH}
               docker push octomike/${CIRCLE_PROJECT_REPONAME,,}:${BRANCH}
+              BRANCH=$(cat /tmp/workspace/docker/branch)
               # update major tag X.Y[-variant] to the latest in this branch
               MAJOR_TAG=$(echo "${CIRCLE_TAG}" | sed -rn 's#([[:digit:]]+).([[:digit:]]+).([[:digit:]]+)(.*)#\1.\2\4#p')
               if [[ -n "${MAJOR_TAG}" ]] ; then
