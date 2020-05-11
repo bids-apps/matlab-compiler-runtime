@@ -49,9 +49,13 @@ jobs:
           command: |
             if [[ -n "${CIRCLE_TAG}" ]]; then
               echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
+              # tag should always be X.Y.Z[-variant]
               docker tag octomike/${CIRCLE_PROJECT_REPONAME,,} octomike/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_TAG}
               docker push octomike/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_TAG}
-              # for tags like 9.7.5-core, share a major tag 9.7-core as well
+              # also publish tag for the corresponding matlab release version, which is the name of the current branch
+              docker tag octomike/${CIRCLE_PROJECT_REPONAME,,} octomike/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_BRANCH}
+              docker push octomike/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_BRANCH}
+              # update major tag X.Y[-variant] to the latest in this branch
               MAJOR_TAG=$(echo "${CIRCLE_TAG}" | sed -rn 's#([[:digit:]]+).([[:digit:]]+).([[:digit:]]+)(.*)#\1.\2\4#p')
               if [[ -n "${MAJOR_TAG}" ]] ; then
                 docker tag octomike/${CIRCLE_PROJECT_REPONAME,,} octomike/${CIRCLE_PROJECT_REPONAME,,}:${MAJOR_TAG}
