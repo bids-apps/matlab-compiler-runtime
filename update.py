@@ -21,7 +21,7 @@ So a sample history for R2020a could look something like this:
 tags for the major version (e.g. 9.8 always pointing to the latest 9.8 tag are
 done in Circle CI to avoid duplicate builds).
 
-Update.py should be run often enough to catch individual matlab releae updates.
+Update.py should be run often enough to catch individual Matlab release updates.
 """
 
 import re
