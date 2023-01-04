@@ -23,13 +23,13 @@ done in Circle CI to avoid duplicate builds).
 
 Update.py should be run often enough to catch individual Matlab release updates.
 """
-
 import re
-from subprocess import DEVNULL, run
+from subprocess import DEVNULL
+from subprocess import run
 from urllib import request
 
-from packaging import version
 from bs4 import BeautifulSoup
+from packaging import version
 
 REL_URL = "https://www.mathworks.com/products/compiler/matlab-runtime.html"
 VER_LIMIT = "9.3"  # release URLs get weird before that..
@@ -69,7 +69,7 @@ for row in soup.find_all("table")[0].find_all("tr"):
         if "glnxa64" not in link:
             raise RuntimeError("Error parsing matlab release page link")
         if match := rel_re.search(link):
-            mcr_ver = "{}.{}".format(mcr_ver, match.groups()[0])
+            mcr_ver = f"{mcr_ver}.{match.groups()[0]}"
         dockers.append((mcr_name, mcr_ver, link))
 
 
@@ -79,17 +79,17 @@ new_tags = []
 for docker in dockers:
     mcr_name, mcr_ver, link = docker
     if len(mcr_ver.split(".")) == 2:
-        mcr_ver = mcr_ver + ".0"
-    mcr_ver_maj = ".".join(mcr_ver.split(".")[0:2])
-    mcr_ver_dir = "v{}".format(mcr_ver_maj.replace(".", ""))
-    if not call("git checkout {}".format(mcr_name)):
-        call("git checkout -b {}".format(mcr_name))
+        mcr_ver = f"{mcr_ver}.0"
+    mcr_ver_maj = ".".join(mcr_ver.split(".")[:2])
+    mcr_ver_dir = f'v{mcr_ver_maj.replace(".", "")}'
+    if not call(f"git checkout {mcr_name}"):
+        call(f"git checkout -b {mcr_name}")
     for (template, suffix) in variants:
-        tag = "{}{}".format(mcr_ver, suffix)
-        if call("git rev-parse --verify {}".format(tag)):
-            print("Skipping {}/{}, already present".format(mcr_name, tag))
+        tag = f"{mcr_ver}{suffix}"
+        if call(f"git rev-parse --verify {tag}"):
+            print(f"Skipping {mcr_name}/{tag}, already present")
             continue
-        print("Adding {}/{}".format(mcr_name, tag))
+        print(f"Adding {mcr_name}/{tag}")
         if not call("git merge master"):
             raise RuntimeError("Merging master failed, will not continue")
         with open(template) as f:
@@ -102,7 +102,7 @@ for docker in dockers:
             call("git add Dockerfile")
             # Tag X.Y.Z[-variant] - see circle CI for shared tag X.Y[-variant]
             call(["git", "commit", "-m", "Auto-Update"], split=False)
-            call("git tag {}".format(tag))
+            call(f"git tag {tag}")
             new_tags.append(tag)
     call("git checkout master")
 
@@ -110,4 +110,4 @@ if new_tags:
     print("New tags have been added, verify and update to git with:")
     print("git push --all")
     for tag in reversed(new_tags):
-        print("git push origin {}".format(tag))
+        print(f"git push origin {tag}")

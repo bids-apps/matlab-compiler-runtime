@@ -37,5 +37,22 @@ repos:
   hooks:
   - id: black
 
+- repo: https://github.com/asottile/pyupgrade
+  rev: v3.3.1
+  hooks:
+  - id: pyupgrade
+    args: [--py38-plus]
+
+- repo: https://github.com/pycqa/flake8
+  rev: 6.0.0
+  hooks:
+  - id: flake8
+
+- repo: https://github.com/asottile/reorder_python_imports
+  rev: v3.9.0
+  hooks:
+  - id: reorder-python-imports
+    args: [--py38-plus]
+
 ci:
   skip: [hadolint-docker]
