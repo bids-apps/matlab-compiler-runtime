@@ -1,53 +1,66 @@
 ---
+tag_filter: &tag_filter
+  filters:
+    tags:
+      only: /.*/
+    branches:
+      ignore: /.*/
+
 version: 2.1
 
 jobs:
+
   build:
     machine:
-      # https://circleci.com/developer/machine/image/ubuntu-2204
       image: ubuntu-2204:2022.10.2
     steps:
     - checkout
-    - restore_cache:
-        keys:
-        - my_cache
     - run:
         name: Build Docker image
-        command: |
-          wget https://raw.githubusercontent.com/bids-apps/maintenance-tools/main/circleci/build_docker.sh
-          bash build_docker.sh  
-    - save_cache:
-        key: my_cache
-        paths:
-        - ~/docker
+        command: bash build_docker.sh
+        no_output_timeout: 30m   # MCR is a large download
     - persist_to_workspace:
         root: /home/circleci
         paths:
         - docker/image.tar
 
-  deploy:
+  test:
     machine:
       image: ubuntu-2204:2022.10.2
     steps:
     - attach_workspace:
         at: /tmp/workspace
-    - run: docker load -i /tmp/workspace/image.tar
     - run:
-        name: push to dockerhub
+        name: Test Docker image
         command: |
-          wget https://raw.githubusercontent.com/bids-apps/maintenance-tools/main/circleci/push_docker.sh
-          bash push_docker.sh  
+          docker load -i /tmp/workspace/docker/image.tar
+          # figure out a better test
+          docker run -ti --rm --read-only \
+            --entrypoint /bin/sh bids/${CIRCLE_PROJECT_REPONAME,,} \
+            -c 'test -d ${MCR_HOME}/runtime/glnxa64'
 
+  deploy:
+    docker:
+    - image: circleci/buildpack-deps:stretch
+    steps:
+    - attach_workspace:
+        at: /tmp/workspace
+    - setup_remote_docker
+    - run: docker load -i /tmp/workspace/docker/image.tar
+    - run:
+        name: Publish Docker image
+        command: push_docker.sh
 
 workflows:
   build-test-deploy:
     jobs:
-    - build
-    - deploy:
+    - build:
+        <<: *tag_filter
+    - test:
         requires:
         - build
-        filters:
-          tags:
-            only: /.*/
-
-# VS Code Extension Version: 1.5.1
+        <<: *tag_filter
+    - deploy:
+        requires:
+        - test
+        <<: *tag_filter

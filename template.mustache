@@ -1,0 +1,48 @@
+FROM bids/base_validator
+
+# Update system
+RUN apt-get -qq update -qq && \
+    apt-get -qq install -qq -y --no-install-recommends \
+        unzip \
+        xorg \
+        wget && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Install MATLAB MCR
+ENV MATLAB_VERSION {{ MATLAB_VERSION }}
+RUN mkdir /opt/mcr_install && \
+    mkdir /opt/mcr && \
+    wget --quiet -P /opt/mcr_install {{ MCR_LINK }} && \
+    unzip -q /opt/mcr_install/*${MATLAB_VERSION}*.zip -d /opt/mcr_install && \
+    cd /opt/mcr_install && mkdir save && \
+{{#core_only}}
+    for f in $(grep -E '(xml|enc)$' productdata/1000.txt) ; do  cp --parents archives/$f save/ ; done && \
+    for f in $(grep -E '(xml|enc)$' productdata/35000.txt) ; do  cp --parents archives/$f save/ ; done && \
+    for f in $(grep -E '(xml|enc)$' productdata/35010.txt) ; do  cp --parents archives/$f save/ ; done && \
+    rm -rf archives && mv save/archives . && rmdir save && \
+{{/core_only}}
+    /opt/mcr_install/install -destinationFolder /opt/mcr -agreeToLicense yes -mode silent && \
+{{#core_only}}
+    rm -rf /opt/mcr/*/cefclient && \
+    rm -rf /opt/mcr/*/mcr/toolbox/matlab/maps && \
+    rm -rf /opt/mcr/*/java/jarext && \
+    rm -rf /opt/mcr/*/toolbox/matlab/system/editor && \
+    rm -rf /opt/mcr/*/toolbox/matlab/codetools && \
+    rm -rf /opt/mcr/*/toolbox/matlab/datatools && \
+    rm -rf /opt/mcr/*/toolbox/matlab/codeanalysis && \
+    rm -rf /opt/mcr/*/toolbox/shared/dastudio && \
+    rm -rf /opt/mcr/*/toolbox/shared/mlreportgen && \
+    rm -rf /opt/mcr/*/sys/java/jre/glnxa64/jre/lib/ext/jfxrt.jar && \
+    rm -rf /opt/mcr/*/sys/java/jre/glnxa64/jre/lib/amd64/libjfxwebkit.so && \
+    rm -rf /opt/mcr/*/bin/glnxa64/libQt* && \
+    rm -rf /opt/mcr/*/bin/glnxa64/qtwebengine && \
+    rm -rf /opt/mcr/*/bin/glnxa64/cef_resources && \
+{{/core_only}}
+    rm -rf /opt/mcr_install /tmp/*
+
+# Configure environment
+ENV MCR_VERSION {{ MCR_VERSION }}
+ENV LD_LIBRARY_PATH /opt/mcr/${MCR_VERSION}/runtime/glnxa64:/opt/mcr/${MCR_VERSION}/bin/glnxa64:/opt/mcr/${MCR_VERSION}/sys/os/glnxa64:/opt/mcr/${MCR_VERSION}/sys/opengl/lib/glnxa64
+ENV MCR_INHIBIT_CTF_LOCK 1
+ENV MCR_HOME /opt/mcr/${MCR_VERSION}
