@@ -23,7 +23,6 @@ done in Circle CI to avoid duplicate builds).
 
 Update.py should be run often enough to catch individual Matlab release updates.
 """
-import pathlib
 import re
 from subprocess import DEVNULL
 from subprocess import run
@@ -39,7 +38,8 @@ REL_URL = "https://www.mathworks.com/products/compiler/matlab-runtime.html"
 VER_LIMIT = "9.3"  # release URLs get weird before that..
 DRY_RUN = True
 
-variants = [("Dockerfile-full.mustache", ""), ("Dockerfile-core.mustache", "-core")]
+template = "template.mustache"
+variants = ["", "-core"]
 
 
 def call(cmd, split=True):
@@ -66,7 +66,7 @@ def add_dockerfile_to_branch(new_tags, docker):
     if not call(f"git checkout {mcr_name}"):
         call(f"git checkout -b {mcr_name}")
 
-    for (template, suffix) in variants:
+    for suffix in variants:
 
         tag = f"{mcr_ver}{suffix}"
 
@@ -78,14 +78,6 @@ def add_dockerfile_to_branch(new_tags, docker):
         if not call("git merge master"):
             raise RuntimeError("Merging master failed, will not continue")
 
-        lines = pathlib.Path(template).read_text()
-        lines = lines.replace("%%MATLAB_VERSION%%", mcr_name)
-        lines = lines.replace("%%MCR_VERSION%%", mcr_ver_dir)
-        lines = lines.replace("%%MCR_LINK%%", link)
-        if not DRY_RUN:
-            with open("Dockerfile", "w+") as f2:
-                f2.write(lines)
-
         with open(template) as f:
             content = chevron.render(
                 f,
@@ -93,10 +85,12 @@ def add_dockerfile_to_branch(new_tags, docker):
                     "MATLAB_VERSION": mcr_name,
                     "MCR_VERSION": mcr_ver_dir,
                     "MCR_LINK": link,
+                    "core_only": suffix == "-core",
                 },
             )
-        with open("Dockerfile", "w+") as f2:
-            f2.write(content)
+        if not DRY_RUN:
+            with open("Dockerfile", "w+") as f2:
+                f2.write(content)
 
         call("git add Dockerfile")
         # Tag X.Y.Z[-variant] - see circle CI for shared tag X.Y[-variant]
