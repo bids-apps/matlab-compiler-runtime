@@ -7,7 +7,9 @@ tag_filter: &tag_filter
       ignore: /.*/
 
 version: 2.1
+
 jobs:
+
   build:
     machine:
       image: ubuntu-2204:2022.10.2
@@ -21,6 +23,7 @@ jobs:
         root: /home/circleci
         paths:
         - docker/image.tar
+
   test:
     machine:
       image: ubuntu-2204:2022.10.2
@@ -35,6 +38,7 @@ jobs:
           docker run -ti --rm --read-only \
             --entrypoint /bin/sh bids/${CIRCLE_PROJECT_REPONAME,,} \
             -c 'test -d ${MCR_HOME}/runtime/glnxa64'
+
   deploy:
     docker:
     - image: circleci/buildpack-deps:stretch
@@ -60,4 +64,3 @@ workflows:
         requires:
         - test
         <<: *tag_filter
-# VS Code Extension Version: 1.5.1
