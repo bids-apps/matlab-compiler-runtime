@@ -31,8 +31,9 @@ from urllib import request
 from packaging import version
 from bs4 import BeautifulSoup
 
-REL_URL = 'https://www.mathworks.com/products/compiler/matlab-runtime.html'
-VER_LIMIT = '9.3' # release URLs get weird before that..
+REL_URL = "https://www.mathworks.com/products/compiler/matlab-runtime.html"
+VER_LIMIT = "9.3"  # release URLs get weird before that..
+
 
 def call(cmd, split=True):
     if split:
@@ -43,16 +44,16 @@ def call(cmd, split=True):
 
 with request.urlopen(REL_URL) as res:
     if res.status != 200:
-        raise RuntimeError('Could not open matlab release URL')
+        raise RuntimeError("Could not open matlab release URL")
     html = res.read()
 
-soup = BeautifulSoup(html, 'html.parser')
-ver_re = re.compile(r'(R2\d{3}.) \((\d\.\d)\)')
-rel_re = re.compile(r'Release/(\d+)/')
+soup = BeautifulSoup(html, "html.parser")
+ver_re = re.compile(r"(R2\d{3}.) \((\d\.\d)\)")
+rel_re = re.compile(r"Release/(\d+)/")
 
 dockers = []
-for row in soup.find_all('table')[0].find_all('tr'):
-    tds = row.find_all('td')
+for row in soup.find_all("table")[0].find_all("tr"):
+    tds = row.find_all("td")
     if len(tds) >= 4:
         name = tds[0].text
         match = ver_re.match(name)
@@ -62,55 +63,52 @@ for row in soup.find_all('table')[0].find_all('tr'):
         if version.parse(mcr_ver) <= version.parse(VER_LIMIT):
             continue
         try:
-            link = tds[2].a.get('href')
+            link = tds[2].a.get("href")
         except (KeyError, ValueError):
-            raise RuntimeError('Error parsing matlab release page')
-        if 'glnxa64' not in link:
-            raise RuntimeError('Error parsing matlab release page link')
+            raise RuntimeError("Error parsing matlab release page")
+        if "glnxa64" not in link:
+            raise RuntimeError("Error parsing matlab release page link")
         match = rel_re.search(link)
         if match:
-            mcr_ver = '{}.{}'.format(mcr_ver, match.groups()[0])
+            mcr_ver = "{}.{}".format(mcr_ver, match.groups()[0])
         dockers.append((mcr_name, mcr_ver, link))
 
 
-variants = [
-    ('Dockerfile-full.template', ''),
-    ('Dockerfile-core.template', '-core')
-]
+variants = [("Dockerfile-full.template", ""), ("Dockerfile-core.template", "-core")]
 new_tags = []
 
 for docker in dockers:
     mcr_name, mcr_ver, link = docker
-    if len(mcr_ver.split('.')) == 2:
-        mcr_ver = mcr_ver + '.0'
-    mcr_ver_maj = '.'.join(mcr_ver.split('.')[0:2])
-    mcr_ver_dir = 'v{}'.format(mcr_ver_maj.replace('.', ''))
-    if not call('git checkout {}'.format(mcr_name)):
-        call('git checkout -b {}'.format(mcr_name))
+    if len(mcr_ver.split(".")) == 2:
+        mcr_ver = mcr_ver + ".0"
+    mcr_ver_maj = ".".join(mcr_ver.split(".")[0:2])
+    mcr_ver_dir = "v{}".format(mcr_ver_maj.replace(".", ""))
+    if not call("git checkout {}".format(mcr_name)):
+        call("git checkout -b {}".format(mcr_name))
     for (template, suffix) in variants:
-        tag = '{}{}'.format(mcr_ver, suffix)
-        if call('git rev-parse --verify {}'.format(tag)):
-            print('Skipping {}/{}, already present'.format(mcr_name, tag))
+        tag = "{}{}".format(mcr_ver, suffix)
+        if call("git rev-parse --verify {}".format(tag)):
+            print("Skipping {}/{}, already present".format(mcr_name, tag))
             continue
-        print('Adding {}/{}'.format(mcr_name, tag))
-        if not call('git merge master'):
-            raise RuntimeError('Merging master failed, will not continue')
+        print("Adding {}/{}".format(mcr_name, tag))
+        if not call("git merge master"):
+            raise RuntimeError("Merging master failed, will not continue")
         with open(template) as f:
             lines = f.read()
-            lines = lines.replace('%%MATLAB_VERSION%%', mcr_name)
-            lines = lines.replace('%%MCR_VERSION%%', mcr_ver_dir)
-            lines = lines.replace('%%MCR_LINK%%', link)
-            with open('Dockerfile', 'w+') as f2:
+            lines = lines.replace("%%MATLAB_VERSION%%", mcr_name)
+            lines = lines.replace("%%MCR_VERSION%%", mcr_ver_dir)
+            lines = lines.replace("%%MCR_LINK%%", link)
+            with open("Dockerfile", "w+") as f2:
                 f2.write(lines)
-            call('git add Dockerfile')
-            # Tag X.Y.Z[-variant] - see circle CI for shared tag X.Y[-variant] 
-            call(['git', 'commit', '-m', 'Auto-Update'], split=False)
-            call('git tag {}'.format(tag))
+            call("git add Dockerfile")
+            # Tag X.Y.Z[-variant] - see circle CI for shared tag X.Y[-variant]
+            call(["git", "commit", "-m", "Auto-Update"], split=False)
+            call("git tag {}".format(tag))
             new_tags.append(tag)
-    call('git checkout master')
+    call("git checkout master")
 
 if new_tags:
-    print('New tags have been added, verify and update to git with:')
-    print('git push --all')
+    print("New tags have been added, verify and update to git with:")
+    print("git push --all")
     for tag in reversed(new_tags):
-        print('git push origin {}'.format(tag))
+        print("git push origin {}".format(tag))

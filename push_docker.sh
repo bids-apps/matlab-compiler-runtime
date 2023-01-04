@@ -21,5 +21,5 @@ if [[ -n "${CIRCLE_TAG}" ]]; then
     docker tag "bids/${CIRCLE_PROJECT_REPONAME,,}" "bids/${CIRCLE_PROJECT_REPONAME,,}:${MAJOR_TAG}"
     docker push "bids/${CIRCLE_PROJECT_REPONAME,,}:${MAJOR_TAG}"
     fi
-    
+
 fi

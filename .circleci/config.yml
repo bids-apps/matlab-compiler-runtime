@@ -1,3 +1,4 @@
+---
 tag_filter: &tag_filter
   filters:
     tags:
@@ -9,55 +10,54 @@ version: 2.1
 jobs:
   build:
     machine:
-      image: circleci/classic:latest
+      image: ubuntu-2204:2022.10.2
     steps:
-      - checkout
-      - run:
-          name: Build Docker image
-          command: bash build_docker.sh
-          no_output_timeout: 30m # MCR is a large download
-      - persist_to_workspace:
-          root: /home/circleci
-          paths:
-            - docker/image.tar
+    - checkout
+    - run:
+        name: Build Docker image
+        command: bash build_docker.sh
+        no_output_timeout: 30m   # MCR is a large download
+    - persist_to_workspace:
+        root: /home/circleci
+        paths:
+        - docker/image.tar
   test:
     machine:
-      image: circleci/classic:latest
+      image: ubuntu-2204:2022.10.2
     steps:
-      - attach_workspace:
-          at: /tmp/workspace
-      - run:
-          name: Test Docker image
-          command: |
-            docker load -i /tmp/workspace/docker/image.tar
-            # figure out a better test
-            docker run -ti --rm --read-only \
-              --entrypoint /bin/sh bids/${CIRCLE_PROJECT_REPONAME,,} \
-              -c 'test -d ${MCR_HOME}/runtime/glnxa64'
+    - attach_workspace:
+        at: /tmp/workspace
+    - run:
+        name: Test Docker image
+        command: |
+          docker load -i /tmp/workspace/docker/image.tar
+          # figure out a better test
+          docker run -ti --rm --read-only \
+            --entrypoint /bin/sh bids/${CIRCLE_PROJECT_REPONAME,,} \
+            -c 'test -d ${MCR_HOME}/runtime/glnxa64'
   deploy:
     docker:
-      - image: circleci/buildpack-deps:stretch
+    - image: circleci/buildpack-deps:stretch
     steps:
-      - attach_workspace:
-          at: /tmp/workspace
-      - setup_remote_docker
-      - run: docker load -i /tmp/workspace/docker/image.tar
-      - run:
-          name: Publish Docker image
-          command: push_docker.sh
+    - attach_workspace:
+        at: /tmp/workspace
+    - setup_remote_docker
+    - run: docker load -i /tmp/workspace/docker/image.tar
+    - run:
+        name: Publish Docker image
+        command: push_docker.sh
 
 workflows:
   build-test-deploy:
     jobs:
-      - build:
-          <<: *tag_filter
-      - test:
-          requires:
-            - build
-          <<: *tag_filter
-      - deploy:
-          requires:
-            - test
-          <<: *tag_filter
-
+    - build:
+        <<: *tag_filter
+    - test:
+        requires:
+        - build
+        <<: *tag_filter
+    - deploy:
+        requires:
+        - test
+        <<: *tag_filter
 # VS Code Extension Version: 1.5.1
