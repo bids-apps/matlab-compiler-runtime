@@ -14,14 +14,7 @@ jobs:
       - checkout
       - run:
           name: Build Docker image
-          command: |
-            git describe --tags --always > version
-            docker build -t bids/${CIRCLE_PROJECT_REPONAME,,} .
-            mkdir -p ${HOME}/docker
-            docker save "bids/${CIRCLE_PROJECT_REPONAME,,}" > ~/docker/image.tar
-            # persist guessed branch so we can use it in deploy/tag
-            BRANCH=$(git branch --contains tags/${CIRCLE_TAG})
-            echo -n ${BRANCH} > ~/docker/branch
+          command: bash build_docker.sh
           no_output_timeout: 30m # MCR is a large download
       - persist_to_workspace:
           root: /home/circleci
@@ -51,23 +44,8 @@ jobs:
       - run: docker load -i /tmp/workspace/docker/image.tar
       - run:
           name: Publish Docker image
-          command: |
-            if [[ -n "${CIRCLE_TAG}" ]]; then
-              echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
-              # tag should always be X.Y.Z[-variant]
-              docker tag bids/${CIRCLE_PROJECT_REPONAME,,} bids/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_TAG}
-              docker push bids/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_TAG}
-              # also publish tag for the corresponding matlab release version, which is the name of the current branch
-              docker tag bids/${CIRCLE_PROJECT_REPONAME,,} bids/${CIRCLE_PROJECT_REPONAME,,}:${BRANCH}
-              docker push bids/${CIRCLE_PROJECT_REPONAME,,}:${BRANCH}
-              BRANCH=$(cat /tmp/workspace/docker/branch)
-              # update major tag X.Y[-variant] to the latest in this branch
-              MAJOR_TAG=$(echo "${CIRCLE_TAG}" | sed -rn 's#([[:digit:]]+).([[:digit:]]+).([[:digit:]]+)(.*)#\1.\2\4#p')
-              if [[ -n "${MAJOR_TAG}" ]] ; then
-                docker tag bids/${CIRCLE_PROJECT_REPONAME,,} bids/${CIRCLE_PROJECT_REPONAME,,}:${MAJOR_TAG}
-                docker push bids/${CIRCLE_PROJECT_REPONAME,,}:${MAJOR_TAG}
-              fi
-            fi
+          command: push_docker.sh
+
 workflows:
   build-test-deploy:
     jobs:
