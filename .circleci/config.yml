@@ -5,7 +5,7 @@ tag_filter: &tag_filter
     branches:
       ignore: /.*/
 
-version: 2
+version: 2.1
 jobs:
   build:
     machine:
@@ -16,9 +16,9 @@ jobs:
           name: Build Docker image
           command: |
             git describe --tags --always > version
-            docker build -t octomike/${CIRCLE_PROJECT_REPONAME,,} .
+            docker build -t bids/${CIRCLE_PROJECT_REPONAME,,} .
             mkdir -p ${HOME}/docker
-            docker save "octomike/${CIRCLE_PROJECT_REPONAME,,}" > ~/docker/image.tar
+            docker save "bids/${CIRCLE_PROJECT_REPONAME,,}" > ~/docker/image.tar
             # persist guessed branch so we can use it in deploy/tag
             BRANCH=$(git branch --contains tags/${CIRCLE_TAG})
             echo -n ${BRANCH} > ~/docker/branch
@@ -38,7 +38,9 @@ jobs:
           command: |
             docker load -i /tmp/workspace/docker/image.tar
             # figure out a better test
-            docker run -ti --rm --read-only --entrypoint /bin/sh octomike/${CIRCLE_PROJECT_REPONAME,,} -c 'test -d ${MCR_HOME}/runtime/glnxa64'
+            docker run -ti --rm --read-only \
+              --entrypoint /bin/sh bids/${CIRCLE_PROJECT_REPONAME,,} \
+              -c 'test -d ${MCR_HOME}/runtime/glnxa64'
   deploy:
     docker:
       - image: circleci/buildpack-deps:stretch
@@ -53,21 +55,20 @@ jobs:
             if [[ -n "${CIRCLE_TAG}" ]]; then
               echo "${DOCKER_PASS}" | docker login --username "${DOCKER_USER}" --password-stdin
               # tag should always be X.Y.Z[-variant]
-              docker tag octomike/${CIRCLE_PROJECT_REPONAME,,} octomike/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_TAG}
-              docker push octomike/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_TAG}
+              docker tag bids/${CIRCLE_PROJECT_REPONAME,,} bids/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_TAG}
+              docker push bids/${CIRCLE_PROJECT_REPONAME,,}:${CIRCLE_TAG}
               # also publish tag for the corresponding matlab release version, which is the name of the current branch
-              docker tag octomike/${CIRCLE_PROJECT_REPONAME,,} octomike/${CIRCLE_PROJECT_REPONAME,,}:${BRANCH}
-              docker push octomike/${CIRCLE_PROJECT_REPONAME,,}:${BRANCH}
+              docker tag bids/${CIRCLE_PROJECT_REPONAME,,} bids/${CIRCLE_PROJECT_REPONAME,,}:${BRANCH}
+              docker push bids/${CIRCLE_PROJECT_REPONAME,,}:${BRANCH}
               BRANCH=$(cat /tmp/workspace/docker/branch)
               # update major tag X.Y[-variant] to the latest in this branch
               MAJOR_TAG=$(echo "${CIRCLE_TAG}" | sed -rn 's#([[:digit:]]+).([[:digit:]]+).([[:digit:]]+)(.*)#\1.\2\4#p')
               if [[ -n "${MAJOR_TAG}" ]] ; then
-                docker tag octomike/${CIRCLE_PROJECT_REPONAME,,} octomike/${CIRCLE_PROJECT_REPONAME,,}:${MAJOR_TAG}
-                docker push octomike/${CIRCLE_PROJECT_REPONAME,,}:${MAJOR_TAG}
+                docker tag bids/${CIRCLE_PROJECT_REPONAME,,} bids/${CIRCLE_PROJECT_REPONAME,,}:${MAJOR_TAG}
+                docker push bids/${CIRCLE_PROJECT_REPONAME,,}:${MAJOR_TAG}
               fi
             fi
 workflows:
-  version: 2
   build-test-deploy:
     jobs:
       - build:
@@ -80,3 +81,5 @@ workflows:
           requires:
             - test
           <<: *tag_filter
+
+# VS Code Extension Version: 1.5.1
