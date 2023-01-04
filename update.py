@@ -39,7 +39,8 @@ VER_LIMIT = "9.3"  # release URLs get weird before that..
 DRY_RUN = True
 
 template = "template.mustache"
-variants = ["", "-core"]
+# variants = ["", "-core"]
+variants = [""]
 
 
 def call(cmd, split=True):
