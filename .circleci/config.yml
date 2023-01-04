@@ -61,6 +61,8 @@ jobs:
               docker tag bids/${repo_name} bids/${repo_name}:${CIRCLE_TAG}
               docker push bids/${repo_name}:${CIRCLE_TAG};
             fi
+          else
+            echo "No DOCKER_PASS, skipping push to DockerHub"
           fi
 
 
