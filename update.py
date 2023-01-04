@@ -68,8 +68,7 @@ for row in soup.find_all("table")[0].find_all("tr"):
             raise RuntimeError("Error parsing matlab release page")
         if "glnxa64" not in link:
             raise RuntimeError("Error parsing matlab release page link")
-        match = rel_re.search(link)
-        if match:
+        if match := rel_re.search(link):
             mcr_ver = "{}.{}".format(mcr_ver, match.groups()[0])
         dockers.append((mcr_name, mcr_ver, link))
 
