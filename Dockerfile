@@ -1,10 +1,12 @@
 FROM bids/base_validator
 
 # Update system
-RUN apt-get -qq update && apt-get -qq install -y \
-    unzip \
-    xorg \
-    wget && \
+RUN apt-get -qq update -qq && \
+    apt-get -qq install -qq -y --no-install-recommends \
+        unzip \
+        xorg \
+        wget && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install MATLAB MCR
