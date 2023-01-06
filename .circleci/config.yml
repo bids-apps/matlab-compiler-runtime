@@ -54,12 +54,10 @@ jobs:
 workflows:
   build-test-deploy:
     jobs:
-    - build:
-        <<: *tag_filter
+    - build
     - test:
         requires:
         - build
-        <<: *tag_filter
     - deploy:
         requires:
         - test
