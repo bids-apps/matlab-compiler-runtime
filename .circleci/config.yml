@@ -59,6 +59,8 @@ workflows:
         requires:
         - build
     - deploy:
+        context:
+        - dockerhub
         requires:
         - test
         <<: *tag_filter
