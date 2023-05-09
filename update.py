@@ -54,7 +54,6 @@ def call(cmd, split=True):
 
 
 def add_dockerfile_to_branch(new_tags, docker):
-
     mcr_name, mcr_ver, link = docker
 
     if len(mcr_ver.split(".")) == 2:
@@ -68,7 +67,6 @@ def add_dockerfile_to_branch(new_tags, docker):
         call(f"git checkout -b {mcr_name}")
 
     for suffix in variants:
-
         tag = f"{mcr_ver}{suffix}"
 
         if not DRY_RUN and call(f"git rev-parse --verify {tag}"):
@@ -107,13 +105,11 @@ def add_dockerfile_to_branch(new_tags, docker):
 
 
 def list_mcr(soup):
-
     ver_re = re.compile(r"(R2\d{3}.) \((\d\.\d+)\)")
     rel_re = re.compile(r"Release/(\d+)/")
 
     dockers = []
     for row in soup.find_all("table")[0].find_all("tr"):
-
         tds = row.find_all("td")
 
         if len(tds) >= 4:
@@ -142,7 +138,6 @@ def list_mcr(soup):
 
 
 def main():
-
     with request.urlopen(REL_URL) as res:
         if res.status != 200:
             raise RuntimeError("Could not open matlab release URL")
