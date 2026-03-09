@@ -33,7 +33,6 @@ from bs4 import BeautifulSoup
 from packaging import version
 from rich import print
 
-
 REL_URL = "https://www.mathworks.com/products/compiler/matlab-runtime.html"
 VER_LIMIT = "9.3"  # release URLs get weird before that..
 DRY_RUN = True
