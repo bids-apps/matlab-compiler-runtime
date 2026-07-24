@@ -23,6 +23,7 @@ done in Circle CI to avoid duplicate builds).
 
 Update.py should be run often enough to catch individual Matlab release updates.
 """
+
 import re
 from subprocess import DEVNULL
 from subprocess import run
